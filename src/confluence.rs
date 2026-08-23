@@ -711,6 +711,9 @@ async fn follow_redirect_chain(url: Url, token: &str) -> Result<String> {
         }
         current = fetch_and_validate_redirect(&client, &current, token).await?;
     }
+    if !is_confluence_redirect_url(&current) {
+        return Ok(current.to_string());
+    }
     bail!("Too many redirects while resolving Confluence short URL: {current}")
 }
 
