@@ -122,7 +122,7 @@ pub async fn download_plantuml_includes(
             debug!("Downloading PlantUML include: name: {file_name}");
             let response = client
                 .get(&url)
-                .headers(binary_auth_headers(opts.token))
+                .headers(binary_auth_headers(opts.token, opts.base_url, &url))
                 .send()
                 .await
                 .context("HTTP")?;

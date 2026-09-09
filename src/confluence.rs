@@ -362,6 +362,7 @@ pub fn build_attachment_maps(attachments: &[Attachment]) -> AttachmentMaps {
 
 pub struct DownloadBinaryOptions<'a> {
     pub url: &'a str,
+    pub base_url: &'a str,
     pub token: &'a str,
     pub assets_abs_dir: &'a Path,
     pub markdown_image_prefix: &'a str,
@@ -375,7 +376,7 @@ pub async fn download_binary_to_asset(
 ) -> Result<String> {
     let response = client
         .get(opts.url)
-        .headers(binary_auth_headers(opts.token))
+        .headers(binary_auth_headers(opts.token, opts.base_url, opts.url))
         .send()
         .await
         .with_context(|| format!("HTTP request failed: {}", opts.url))?;
@@ -447,6 +448,7 @@ pub async fn download_attachment_to_asset(
         client,
         DownloadBinaryOptions {
             url: &url,
+            base_url: opts.base_url,
             token: opts.token,
             assets_abs_dir: opts.assets_abs_dir,
             markdown_image_prefix: opts.markdown_image_prefix,
@@ -504,6 +506,7 @@ pub async fn download_images_and_rewrite_html(
             client,
             DownloadBinaryOptions {
                 url: &absolute,
+                base_url: opts.base_url,
                 token: opts.personal_access_token,
                 assets_abs_dir: opts.assets_abs_dir,
                 markdown_image_prefix: opts.markdown_image_prefix,

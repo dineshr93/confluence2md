@@ -180,10 +180,18 @@ pub fn escape_html(text: &str) -> String {
     out
 }
 
-/// Build headers for binary downloads using the resolved Authorization value.
-pub fn binary_auth_headers(auth_value: &str) -> HeaderMap {
+/// Build headers for binary downloads when the request stays on the same domain.
+pub fn binary_auth_headers(auth_value: &str, base_url: &str, request_url: &str) -> HeaderMap {
     let mut headers = HeaderMap::new();
-    if let Ok(v) = HeaderValue::from_str(auth_value) {
+    let same_domain = Url::parse(base_url)
+        .ok()
+        .and_then(|base| {
+            Url::parse(request_url).ok().map(|request| {
+                base.scheme() == request.scheme() && base.host_str() == request.host_str()
+            })
+        })
+        .unwrap_or(false);
+    if same_domain && let Ok(v) = HeaderValue::from_str(auth_value) {
         headers.insert(AUTHORIZATION, v);
     }
     headers
@@ -805,7 +813,11 @@ mod tests {
 
     #[test]
     fn binary_auth_headers_bearer_sets_authorization_without_accept() {
-        let headers = binary_auth_headers("Bearer my-token");
+        let headers = binary_auth_headers(
+            "Bearer my-token",
+            "https://confluence.example.com/wiki",
+            "https://confluence.example.com/download/image.png",
+        );
         assert_eq!(
             headers.get(AUTHORIZATION).unwrap().to_str().unwrap(),
             "Bearer my-token"
@@ -815,12 +827,26 @@ mod tests {
 
     #[test]
     fn binary_auth_headers_basic_sets_authorization_without_accept() {
-        let headers = binary_auth_headers("Basic dXNlcjpwYXNz");
+        let headers = binary_auth_headers(
+            "Basic dXNlcjpwYXNz",
+            "https://confluence.example.com/wiki",
+            "https://confluence.example.com/download/image.png",
+        );
         assert_eq!(
             headers.get(AUTHORIZATION).unwrap().to_str().unwrap(),
             "Basic dXNlcjpwYXNz"
         );
         assert!(headers.get(ACCEPT).is_none());
+    }
+
+    #[test]
+    fn binary_auth_headers_omits_authorization_for_different_domain() {
+        let headers = binary_auth_headers(
+            "Bearer my-token",
+            "https://confluence.example.com/wiki",
+            "https://cdn.example.net/image.png",
+        );
+        assert!(headers.get(AUTHORIZATION).is_none());
     }
 
     #[test]

@@ -628,7 +628,11 @@ async fn materialize_drawio_source(
 ) -> Result<String> {
     let png_response = client
         .get(&source.png_url)
-        .headers(binary_auth_headers(opts.token))
+        .headers(binary_auth_headers(
+            opts.token,
+            opts.base_url,
+            &source.png_url,
+        ))
         .send()
         .await
         .context("PNG fetch")?;
@@ -649,7 +653,7 @@ async fn materialize_drawio_source(
             );
             let xml_response = client
                 .get(xml_url)
-                .headers(binary_auth_headers(opts.token))
+                .headers(binary_auth_headers(opts.token, opts.base_url, xml_url))
                 .send()
                 .await;
             let drawio_xml: Option<String> = match xml_response {
