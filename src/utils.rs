@@ -186,15 +186,20 @@ pub fn binary_auth_headers(auth_value: &str, base_url: &str, request_url: &str) 
     let same_domain = Url::parse(base_url)
         .ok()
         .and_then(|base| {
-            Url::parse(request_url).ok().map(|request| {
-                base.scheme() == request.scheme() && base.host_str() == request.host_str()
-            })
+            Url::parse(request_url)
+                .ok()
+                .map(|request| request.scheme() == "https" && same_host_and_port(&base, &request))
         })
         .unwrap_or(false);
     if same_domain && let Ok(v) = HeaderValue::from_str(auth_value) {
         headers.insert(AUTHORIZATION, v);
     }
     headers
+}
+
+pub fn same_host_and_port(source: &Url, target: &Url) -> bool {
+    source.host_str() == target.host_str()
+        && source.port_or_known_default() == target.port_or_known_default()
 }
 
 // ── Filename derivation ────────────────────────────────────────────
@@ -845,6 +850,26 @@ mod tests {
             "Bearer my-token",
             "https://confluence.example.com/wiki",
             "https://cdn.example.net/image.png",
+        );
+        assert!(headers.get(AUTHORIZATION).is_none());
+    }
+
+    #[test]
+    fn binary_auth_headers_omits_authorization_for_different_port() {
+        let headers = binary_auth_headers(
+            "Bearer my-token",
+            "https://confluence.example.com",
+            "https://confluence.example.com:8443/image.png",
+        );
+        assert!(headers.get(AUTHORIZATION).is_none());
+    }
+
+    #[test]
+    fn binary_auth_headers_omits_authorization_for_http() {
+        let headers = binary_auth_headers(
+            "Bearer my-token",
+            "http://confluence.example.com",
+            "http://confluence.example.com/download/image.png",
         );
         assert!(headers.get(AUTHORIZATION).is_none());
     }

@@ -18,7 +18,7 @@ use url::Url;
 
 use crate::utils::{
     HeaderHints, URI_COMPONENT, binary_auth_headers, decode_html_attribute, ensure_dir,
-    get_file_name_from_url_or_headers, resolve_url, to_markdown_asset_path,
+    get_file_name_from_url_or_headers, resolve_url, same_host_and_port, to_markdown_asset_path,
 };
 
 const USER_AGENT: &str = concat!("confluence2md/", env!("CARGO_PKG_VERSION"));
@@ -753,9 +753,7 @@ fn validate_redirect_target(source: &Url, location: &str) -> Result<Url> {
     if !target.username().is_empty() || target.password().is_some() {
         bail!("Refusing to follow short URL redirect containing userinfo: {target}");
     }
-    if target.host_str() != source.host_str()
-        || target.port_or_known_default() != source.port_or_known_default()
-    {
+    if !same_host_and_port(source, &target) {
         bail!("Refusing to follow short URL redirect to a different origin: {target}");
     }
     Ok(target)
