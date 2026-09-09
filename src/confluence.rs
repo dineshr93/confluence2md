@@ -17,7 +17,7 @@ use tracing::{debug, warn};
 use url::Url;
 
 use crate::utils::{
-    HeaderHints, URI_COMPONENT, decode_html_attribute, ensure_dir,
+    HeaderHints, URI_COMPONENT, binary_auth_headers, decode_html_attribute, ensure_dir,
     get_file_name_from_url_or_headers, resolve_url, to_markdown_asset_path,
 };
 
@@ -154,14 +154,6 @@ fn base64_encode(input: &[u8]) -> String {
 fn auth_headers(auth_value: &str) -> HeaderMap {
     let mut headers = HeaderMap::new();
     headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
-    if let Ok(v) = HeaderValue::from_str(auth_value) {
-        headers.insert(AUTHORIZATION, v);
-    }
-    headers
-}
-
-fn binary_auth_headers(auth_value: &str) -> HeaderMap {
-    let mut headers = HeaderMap::new();
     if let Ok(v) = HeaderValue::from_str(auth_value) {
         headers.insert(AUTHORIZATION, v);
     }
@@ -1235,8 +1227,8 @@ mod tests {
         }
     }
 
-    // Feature: cloud-api-token-auth — auth_headers / binary_auth_headers tests
-    // Validates: Requirements 3.2, 4.2
+    // Feature: cloud-api-token-auth — auth_headers tests
+    // Validates: Requirement 3.2
 
     #[test]
     fn auth_headers_bearer_sets_authorization_and_accept() {
@@ -1261,32 +1253,6 @@ mod tests {
         assert_eq!(
             headers.get(ACCEPT).unwrap().to_str().unwrap(),
             "application/json"
-        );
-    }
-
-    #[test]
-    fn binary_auth_headers_bearer_sets_authorization_without_accept() {
-        let headers = binary_auth_headers("Bearer my-token");
-        assert_eq!(
-            headers.get(AUTHORIZATION).unwrap().to_str().unwrap(),
-            "Bearer my-token"
-        );
-        assert!(
-            headers.get(ACCEPT).is_none(),
-            "binary_auth_headers must not set Accept header"
-        );
-    }
-
-    #[test]
-    fn binary_auth_headers_basic_sets_authorization_without_accept() {
-        let headers = binary_auth_headers("Basic dXNlcjpwYXNz");
-        assert_eq!(
-            headers.get(AUTHORIZATION).unwrap().to_str().unwrap(),
-            "Basic dXNlcjpwYXNz"
-        );
-        assert!(
-            headers.get(ACCEPT).is_none(),
-            "binary_auth_headers must not set Accept header"
         );
     }
 

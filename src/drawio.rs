@@ -7,15 +7,14 @@ use anyhow::{Context, Result, anyhow, bail};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use reqwest::Client;
-use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
 use sha1::{Digest, Sha1};
 use tracing::{debug, warn};
 use url::Url;
 
 use crate::confluence::{Attachment, attachment_download_url};
 use crate::utils::{
-    escape_html, extract_macro_blocks, extract_macro_param, resolve_url, sanitize_file_name,
-    to_markdown_asset_path,
+    binary_auth_headers, escape_html, extract_macro_blocks, extract_macro_param, resolve_url,
+    sanitize_file_name, to_markdown_asset_path,
 };
 
 // ── Public types ───────────────────────────────────────────────────
@@ -404,14 +403,6 @@ pub fn embed_drawio_xml_in_png(png_bytes: &[u8], drawio_xml: &str) -> Result<Vec
 }
 
 // ── High-level resolution ──────────────────────────────────────────
-
-fn binary_auth_headers(token: &str) -> HeaderMap {
-    let mut headers = HeaderMap::new();
-    if let Ok(v) = HeaderValue::from_str(&format!("Bearer {token}")) {
-        headers.insert(AUTHORIZATION, v);
-    }
-    headers
-}
 
 fn pick_unique(used: &mut HashSet<String>, candidate: String) -> String {
     if !used.contains(&candidate) {

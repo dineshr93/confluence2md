@@ -9,6 +9,7 @@ use crate::jira::replace_jira_macros;
 use once_cell::sync::Lazy;
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use regex::Regex;
+use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
 use url::Url;
 
 // ── Filename sanitisation ──────────────────────────────────────────
@@ -177,6 +178,15 @@ pub fn escape_html(text: &str) -> String {
         }
     }
     out
+}
+
+/// Build headers for binary downloads using the resolved Authorization value.
+pub fn binary_auth_headers(auth_value: &str) -> HeaderMap {
+    let mut headers = HeaderMap::new();
+    if let Ok(v) = HeaderValue::from_str(auth_value) {
+        headers.insert(AUTHORIZATION, v);
+    }
+    headers
 }
 
 // ── Filename derivation ────────────────────────────────────────────
@@ -763,6 +773,7 @@ use once_cell as _;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use reqwest::header::ACCEPT;
 
     #[test]
     fn sanitize_file_name_removes_forbidden_chars() {
@@ -790,6 +801,26 @@ mod tests {
     fn sanitize_file_name_fallback_for_empty_or_symbols_only() {
         assert_eq!(sanitize_file_name(""), "file");
         assert_eq!(sanitize_file_name("???"), "file");
+    }
+
+    #[test]
+    fn binary_auth_headers_bearer_sets_authorization_without_accept() {
+        let headers = binary_auth_headers("Bearer my-token");
+        assert_eq!(
+            headers.get(AUTHORIZATION).unwrap().to_str().unwrap(),
+            "Bearer my-token"
+        );
+        assert!(headers.get(ACCEPT).is_none());
+    }
+
+    #[test]
+    fn binary_auth_headers_basic_sets_authorization_without_accept() {
+        let headers = binary_auth_headers("Basic dXNlcjpwYXNz");
+        assert_eq!(
+            headers.get(AUTHORIZATION).unwrap().to_str().unwrap(),
+            "Basic dXNlcjpwYXNz"
+        );
+        assert!(headers.get(ACCEPT).is_none());
     }
 
     #[test]

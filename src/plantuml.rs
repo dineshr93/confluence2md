@@ -7,14 +7,13 @@ use anyhow::{Context, Result, bail};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use reqwest::Client;
-use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
 use tracing::{debug, warn};
 
 use crate::confluence::{
     Attachment, DownloadAttachmentOptions, attachment_download_url, download_attachment_to_asset,
 };
 use crate::drawio::{FallbackDiagram, RewrittenHtml, append_fallback_diagrams_section};
-use crate::utils::{escape_html, extract_macro_blocks, extract_macro_param};
+use crate::utils::{binary_auth_headers, escape_html, extract_macro_blocks, extract_macro_param};
 
 pub struct ResolvePlantUmlOptions<'a> {
     pub page_id: &'a str,
@@ -96,14 +95,6 @@ pub struct DownloadIncludesOptions<'a> {
     pub token: &'a str,
     pub assets_abs_dir: &'a Path,
     pub markdown_image_prefix: &'a str,
-}
-
-fn binary_auth_headers(token: &str) -> HeaderMap {
-    let mut headers = HeaderMap::new();
-    if let Ok(v) = HeaderValue::from_str(&format!("Bearer {token}")) {
-        headers.insert(AUTHORIZATION, v);
-    }
-    headers
 }
 
 pub async fn download_plantuml_includes(
